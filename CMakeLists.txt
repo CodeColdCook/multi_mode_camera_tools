@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
-project(multi_mode_camera_tools VERSION 1.0)
+project(camodocal 
+  VERSION 1.1
+  LANGUAGES CXX)
 
-# set(CMAKE_BUILD_TYPE "Release")
-# set(CMAKE_CXX_STANDARD 14)
-# set(CMAKE_CXX_FLAGS_RELEASE "-O3 -fPIC")
+#准备的版本设置
+SET(PROJECT_VERSION_MAJOR 1)
+SET(PROJECT_VERSION_MINOR 0)
+SET(PROJECT_VERSION_PATCH 1)
 
 # =============#
 # Dependencies #
@@ -13,23 +16,19 @@ project(multi_mode_camera_tools VERSION 1.0)
 # Third-party libraries #
 # ----------------------#
 
+
+# useful macros
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/pmtd_cmake/util.cmake)
+
 find_package(OpenCV REQUIRED)
 find_package(Boost REQUIRED COMPONENTS filesystem program_options system)
 find_package(Ceres REQUIRED)
 find_package(GTest REQUIRED) 
-find_package(OpenMP)
-if (OPENMP_FOUND)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-endif()
  
 # =========#
-# Settings #
+# Settings # 
 # =========#  
-  
-# install path
-# set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install)
- 
+
 # shared libraries
 if(NOT DEFINED BUILD_SHARED_LIBS) 
   message(STATUS "${PROJECT_NAME}: Building dynamically-linked binaries")
@@ -49,9 +48,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_definitions(-O2)
-
-# useful macros
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/util.cmake)
 
 # ##############################################################################
 # Build #
@@ -73,8 +69,13 @@ include(GNUInstallDirs)
 file(GLOB_RECURSE src_files ${PROJECT_SOURCE_DIR}/src/*.cc
      ${PROJECT_SOURCE_DIR}/src/*/*.cc)
 
-# common library
-zetton_cc_library(
+# install path setting
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX "/opt/pmtd")
+endif()
+
+# common library and install settings
+pmtd_deb_library(
   NAME
   ${PROJECT_NAME}
   SRCS
@@ -93,11 +94,24 @@ zetton_cc_library(
   ${CERES_LIBRARIES}
   )
 
-add_simple_apps()   
+add_simple_apps()  
 
 # unit test
 # tests
-option(BUILD_WITH_TESTS "Build project with tests" ON)
+option(BUILD_WITH_TESTS "Build project with tests" OFF)
 if (BUILD_WITH_TESTS)
    add_tests_in_dir(common)
 endif (BUILD_WITH_TESTS)
+
+# install config DIRECTORY or not
+option(INSTALL_CONFIG "Install the package config to ${CONFIG_DIR}" OFF)
+pmtd_library_settings()
+
+# make deb pkg settings
+option(ARCHITECTURE_ARM "CPACK_DEBIAN_PACKAGE_ARCHITECTURE default false(amd) " OFF)
+set(description "camera model package for undistort and space to plane")
+if (${ARCHITECTURE_ARM})
+  pmtd_deb_settings("arm64" ${description})
+else(${ARCHITECTURE_ARM})
+  pmtd_deb_settings("amd64" ${description})
+endif (${ARCHITECTURE_ARM})
